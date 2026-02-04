@@ -1,0 +1,5 @@
+{
+  "name": "DevFlow AI Workspace",
+  "description": "A conversation-driven developer workspace that dynamically loads tools like API testers, JSON viewers, and code generators based on natural language commands.",
+  "requestFramePermissions": []
+}

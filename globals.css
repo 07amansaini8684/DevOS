@@ -1,0 +1,12 @@
+
+/* Global styles fallback */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #050505;
+  color: #A1A1AA;
+}
+
+.code-font {
+  font-family: 'Fira Code', monospace;
+}
