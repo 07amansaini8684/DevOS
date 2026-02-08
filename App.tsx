@@ -73,7 +73,7 @@ const HomePage: React.FC<{ onEnter: (tool?: ToolType) => void }> = ({ onEnter })
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, y: -20 }}
-      className="w-full min-h-screen bg-[#050505] text-[#A1A1AA] flex justify-center py-10 px-4 md:px-10 font-sans antialiased"
+      className="w-full min-h-screen bg-[#0a0a0a] text-[#A1A1AA] flex justify-center py-10 px-4 md:px-10 font-sans antialiased"
     >
       <div className="w-full max-w-[1250px] flex flex-col lg:flex-row gap-10">
 
@@ -85,7 +85,7 @@ const HomePage: React.FC<{ onEnter: (tool?: ToolType) => void }> = ({ onEnter })
             transition={{ delay: 0.2 }}
             className="lg:sticky lg:top-10 flex flex-col gap-6"
           >
-            <div className="bg-[#0D0D0D] border border-white/5 rounded-[2.5rem] p-8 shadow-2xl">
+            <div className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
               <div className="flex items-center gap-3 mb-10 px-2 opacity-50">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
                 <span className="text-[10px] font-black tracking-[0.2em] uppercase">TOOL HUB</span>
@@ -126,7 +126,7 @@ const HomePage: React.FC<{ onEnter: (tool?: ToolType) => void }> = ({ onEnter })
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-[#0D0D0D] border border-white/5 rounded-[3rem] p-8 md:p-16 relative overflow-hidden flex flex-col justify-center min-h-[400px] shadow-2xl"
+            className="bg-[#0a0a0a] border border-white/10 rounded-[3rem] p-8 md:p-16 relative overflow-hidden flex flex-col justify-center min-h-[400px] shadow-2xl"
           >
             <div className="flex justify-between items-start mb-12">
               <div className="flex items-center gap-4">
@@ -173,7 +173,7 @@ const HomePage: React.FC<{ onEnter: (tool?: ToolType) => void }> = ({ onEnter })
                     key={idx}
                     whileHover={{ y: -5 }}
                     onClick={() => onEnter(tool.type)}
-                    className="bg-[#0D0D0D] border border-white/5 rounded-[2.5rem] p-8 flex flex-col shadow-xl group hover:border-white/10 transition-all cursor-pointer"
+                    className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-8 flex flex-col shadow-xl group hover:border-white/10 transition-all cursor-pointer"
                   >
                     <div className="flex justify-between items-center mb-6">
                       <div
@@ -198,7 +198,7 @@ const HomePage: React.FC<{ onEnter: (tool?: ToolType) => void }> = ({ onEnter })
                 <motion.div
                   whileHover={{ y: -5 }}
                   onClick={() => onEnter(row2Tool.type)}
-                  className="bg-[#0D0D0D] border border-white/5 rounded-[2.5rem] p-10 flex flex-col shadow-xl group hover:border-white/10 transition-all cursor-pointer md:col-span-1"
+                  className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-10 flex flex-col shadow-xl group hover:border-white/10 transition-all cursor-pointer md:col-span-1"
                 >
                   <div className="flex justify-between items-center mb-8">
                     <div
@@ -216,7 +216,7 @@ const HomePage: React.FC<{ onEnter: (tool?: ToolType) => void }> = ({ onEnter })
                 </motion.div>
 
                 {/* Enterprise Promo Box (Takes 2 of 3 columns) */}
-                <div className="bg-[#0D0D0D] border border-white/5 rounded-[2.5rem] p-10 flex flex-col shadow-xl md:col-span-2">
+                <div className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-10 flex flex-col shadow-xl md:col-span-2">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 bg-green-500/10 rounded-xl flex items-center justify-center text-green-400 shrink-0">
                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
@@ -271,11 +271,11 @@ const HomePage: React.FC<{ onEnter: (tool?: ToolType) => void }> = ({ onEnter })
           {/* LARGE BOTTOM CTA */}
           <section className="relative group">
             <div className="bg-white rounded-[3rem] p-12 md:p-20 flex flex-col items-center text-center overflow-hidden shadow-2xl transition-transform group-hover:scale-[1.01] duration-500">
-              <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-6">READY TO SCALE YOUR PRODUCTIVITY?</span>
+              <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.4em] mb-6">READY TO SCALE YOUR PRODUCTIVITY?</span>
               <h2 className="text-3xl md:text-5xl font-black text-black mb-8 leading-tight tracking-tighter">
                 Join thousands of developers <br className="hidden md:block" /> streamlining production with AI.
               </h2>
-              <p className="text-sm text-zinc-500 max-w-lg mb-12 font-medium">
+              <p className="text-sm text-zinc-600 max-w-lg mb-12 font-medium">
                 Try the AI Code Generator today and see how quickly you can build robust, production-ready modules.
               </p>
               <button
@@ -285,7 +285,7 @@ const HomePage: React.FC<{ onEnter: (tool?: ToolType) => void }> = ({ onEnter })
                 LAUNCH WORKSPACE <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></svg>
               </button>
             </div>
-            <div className="absolute inset-0 bg-blue-600 rounded-[3.5rem] scale-105 blur-[80px] opacity-10 -z-10 group-hover:opacity-20 transition-opacity" />
+            <div className="absolute inset-0 bg-blue-600 rounded-[3.5rem] scale-105 blur-[80px] opacity-10 -z-10  transition-opacity" />
           </section>
 
           <footer className="py-20 border-t border-white/5 text-center text-[10px] font-black uppercase tracking-[0.4em] text-[#3F3F46]">
