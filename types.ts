@@ -5,6 +5,7 @@ export enum ToolType {
   FormGenerator = 'FormGenerator',
   TableViewer = 'TableViewer',
   ChartBuilder = 'ChartBuilder',
+  ChartViewer = 'ChartViewer',
   CodeGenerator = 'CodeGenerator',
   LogViewer = 'LogViewer',
   MarkdownViewer = 'MarkdownViewer',

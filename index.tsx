@@ -1,8 +1,11 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { TamboProvider } from '@tambo-ai/react';
 import App from './App';
+import { tamboComponents } from './config/tamboComponents';
 import './globals.css';
+
+const tamboApiKey = import.meta.env.VITE_TAMBO_API_KEY ?? '';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -12,6 +15,8 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <TamboProvider apiKey={tamboApiKey} components={tamboComponents}>
+      <App />
+    </TamboProvider>
   </React.StrictMode>
 );

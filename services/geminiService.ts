@@ -2,7 +2,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ToolType } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+function getAi() {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY ?? '';
+  if (!apiKey) return null;
+  return new GoogleGenAI({ apiKey });
+}
 
 const INTENT_SCHEMA = {
   type: Type.OBJECT,
@@ -47,6 +51,14 @@ const INTENT_SCHEMA = {
 };
 
 export const parseIntent = async (userInput: string) => {
+  const ai = getAi();
+  if (!ai) {
+    return {
+      tool: null,
+      message: "Gemini API key is not set. Add VITE_GEMINI_API_KEY to your .env to use intent parsing.",
+      payload: {},
+    };
+  }
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -84,3 +96,47 @@ export const parseIntent = async (userInput: string) => {
     };
   }
 };
+
+/**
+ * Code generation layer: takes task + optional language/framework and returns generated code.
+ * Used by CodeGenerator component (separate from intent/parseIntent).
+ */
+export async function generateCodeFromTask(
+  task: string,
+  language?: string,
+  framework?: string
+): Promise<{ code: string; error: string | null }> {
+  console.log('[generateCodeFromTask] Called with:', { task, language, framework });
+  const ai = getAi();
+  if (!ai) {
+    console.log('[generateCodeFromTask] No AI client (missing VITE_GEMINI_API_KEY)');
+    return { code: '', error: 'Set VITE_GEMINI_API_KEY in .env to generate code.' };
+  }
+  try {
+    const lang = language || 'JavaScript';
+    const fw = framework ? `Framework: ${framework}` : 'No specific framework';
+    const prompt = `Generate production-ready code for the following developer task.
+
+Task: ${task}
+Language: ${lang}
+${fw}
+
+Requirements:
+- Return only code, no markdown fences or explanations
+- Include validation and error handling where appropriate
+- Use clean coding practices`;
+    console.log('[generateCodeFromTask] Sending request to Gemini (model: gemini-2.0-flash)...');
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+      config: {},
+    });
+    const text = response.text?.trim() ?? '';
+    console.log('[generateCodeFromTask] Response received, text length:', text?.length ?? 0, 'preview:', text?.slice(0, 80) ?? '');
+    const code = text.replace(/^```[\w]*\n?/i, '').replace(/\n?```$/i, '').trim();
+    return { code: code || '// No code generated', error: null };
+  } catch (err: any) {
+    console.error('[generateCodeFromTask] Error:', err?.message ?? err, err);
+    return { code: '', error: err?.message ?? 'Failed to generate code.' };
+  }
+}

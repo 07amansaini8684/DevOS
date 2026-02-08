@@ -1,9 +1,11 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTamboThread } from '@tambo-ai/react';
 import { useWorkspaceStore } from './store/workspaceStore';
 import { ToolType } from './types';
 import { TOOL_REGISTRY } from './config/toolRegistry';
+import { tamboComponentToTool, tamboComponentToLabel, extractUrlFromMessageContent, getLastUserMessageContent, getLastUserMessageText, getLastUserMessageTextLikeEnv, extractJsonFromText, extractCommandFromUserMessage } from './services/tamboToWorkspace';
+import TamboChat from './components/TamboChat';
 
 // Tool imports
 import ApiTester from './components/Tools/ApiTester';
@@ -11,6 +13,7 @@ import JsonViewer from './components/Tools/JsonViewer';
 import FormGenerator from './components/Tools/FormGenerator';
 import TableViewer from './components/Tools/TableViewer';
 import ChartBuilder from './components/Tools/ChartBuilder';
+import ChartViewer from './components/Tools/ChartViewer';
 import CodeGenerator from './components/Tools/CodeGenerator';
 import LogViewer from './components/Tools/LogViewer';
 import MarkdownViewer from './components/Tools/MarkdownViewer';
@@ -268,39 +271,250 @@ const HomePage: React.FC<{ onEnter: (tool?: ToolType) => void }> = ({ onEnter })
   );
 };
 
-const ToolRenderer: React.FC<{ tool: any }> = ({ tool }) => {
+const ToolRenderer: React.FC<{ tool: any; createTool?: (type: ToolType, payload: Record<string, unknown>) => void }> = ({ tool, createTool }) => {
+  React.useEffect(() => {
+    console.log('[Workspace] ToolRenderer → tool mounted:', { type: tool.type, title: tool.title, payload: tool.payload });
+  }, [tool.id, tool.type, tool.title, tool.payload]);
   switch (tool.type) {
     case ToolType.ApiTester: return <ApiTester payload={tool.payload} />;
     case ToolType.JsonViewer: return <JsonViewer payload={tool.payload} />;
     case ToolType.FormGenerator: return <FormGenerator payload={tool.payload} />;
     case ToolType.TableViewer: return <TableViewer payload={tool.payload} />;
     case ToolType.ChartBuilder: return <ChartBuilder payload={tool.payload} />;
+    case ToolType.ChartViewer: return <ChartViewer payload={tool.payload} />;
     case ToolType.CodeGenerator: return <CodeGenerator payload={tool.payload} />;
-    case ToolType.LogViewer: return <LogViewer />;
+    case ToolType.LogViewer: return <LogViewer payload={tool.payload} />;
     case ToolType.MarkdownViewer: return <MarkdownViewer payload={tool.payload} />;
-    case ToolType.EnvManager: return <EnvManager />;
-    case ToolType.TerminalSimulator: return <TerminalSimulator />;
+    case ToolType.EnvManager: return <EnvManager payload={tool.payload} />;
+    case ToolType.TerminalSimulator: return <TerminalSimulator payload={tool.payload} createTool={createTool} />;
     default: return <div className="p-8 text-zinc-500">Component mapping not found.</div>;
   }
 };
 
 const WorkspaceUI: React.FC = () => {
-  const { chatHistory, openTools, activeToolId, isLoading, sendMessage, createTool, setActiveTool, closeTool, setView } = useWorkspaceStore();
-  const [chatInput, setChatInput] = useState('');
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
+  const { openTools, activeToolId, createTool, setActiveTool, closeTool, setView } = useWorkspaceStore();
+  const { thread } = useTamboThread();
   const activeTool = openTools.find(t => t.id === activeToolId);
+  const openedMessageIds = useRef<Set<string>>(new Set());
 
+  // Flow: User Input → ChatPanel → AI Model → Intent + Component + Props → Tambo → Workspace → <Tool />
+  // When Tambo returns a component (componentName + props), open that tool on the right panel and focus it.
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory]);
+    thread.messages.forEach((msg) => {
+      const comp = (msg as { component?: { componentName?: string | null; props?: Record<string, unknown> } }).component;
+      if (msg.role !== 'assistant' || !comp?.componentName || openedMessageIds.current.has(msg.id)) return;
 
-  const handleChatSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() || isLoading) return;
-    sendMessage(chatInput);
-    setChatInput('');
-  };
+      const props = comp.props ?? {};
+      console.log('[Tambo → Workspace] Assistant message with component:', {
+        messageId: msg.id,
+        componentName: comp.componentName,
+        propsFromTambo: props,
+        messageContentPreview: Array.isArray(msg.content)
+          ? (msg.content as { text?: string }[]).map((p) => p.text?.slice(0, 80)).join(' | ')
+          : msg.content,
+      });
+
+      let mapped = tamboComponentToTool(comp.componentName, props);
+      if (mapped) {
+        console.log('[Tambo → Workspace] Mapped to tool (before enrichment):', {
+          type: mapped.type,
+          payload: mapped.payload,
+        });
+
+        // When Tambo doesn't pass URL in props, try assistant message text, then the user's last message (they typed the URL)
+        if (mapped.type === ToolType.ApiTester && !mapped.payload.url) {
+          const extractedUrl =
+            extractUrlFromMessageContent(msg.content) ??
+            extractUrlFromMessageContent(getLastUserMessageContent(thread.messages));
+          if (extractedUrl) {
+            mapped = {
+              type: mapped.type,
+              payload: {
+                ...mapped.payload,
+                method: (mapped.payload.method as string) || 'GET',
+                url: extractedUrl,
+              },
+            };
+            console.log('[Tambo → Workspace] Enriched ApiTester payload (URL from message text):', {
+              url: extractedUrl,
+              payload: mapped.payload,
+            });
+          }
+        }
+
+        // When CodeGenerator is opened with empty task, use the last user message as the task (e.g. "generate express login route")
+        if (mapped.type === ToolType.CodeGenerator) {
+          const task = (mapped.payload.task as string)?.trim();
+          if (!task) {
+            const fallbackTask = getLastUserMessageText(thread.messages);
+            if (fallbackTask) {
+              mapped = {
+                type: mapped.type,
+                payload: { ...mapped.payload, task: fallbackTask },
+              };
+              console.log('[Tambo → Workspace] Enriched CodeGenerator payload (task from last user message):', {
+                task: fallbackTask,
+                payload: mapped.payload,
+              });
+            }
+          }
+        }
+
+        // When JsonViewer is opened with empty/default data, use JSON from the last user message (e.g. pasted payload)
+        if (mapped.type === ToolType.JsonViewer) {
+          const data = mapped.payload.data as string | undefined;
+          const isEmpty =
+            data === undefined ||
+            data === '' ||
+            (typeof data === 'string' && data.trim() === '') ||
+            (typeof data === 'string' && data.trim() === '{}');
+          if (isEmpty) {
+            const userText = getLastUserMessageText(thread.messages);
+            const extractedJson = extractJsonFromText(userText);
+            if (extractedJson) {
+              mapped = {
+                type: mapped.type,
+                payload: { ...mapped.payload, data: extractedJson },
+              };
+              console.log('[Tambo → Workspace] Enriched JsonViewer payload (data from last user message):', {
+                dataLength: extractedJson.length,
+                payload: mapped.payload,
+              });
+            }
+          }
+        }
+
+        // When ChartViewer is opened with empty/default data, use JSON from the last user message (e.g. pasted analytics)
+        if (mapped.type === ToolType.ChartViewer) {
+          const data = mapped.payload.data;
+          const isEmpty =
+            data === undefined ||
+            data === null ||
+            (typeof data === 'string' && (data.trim() === '' || data.trim() === '[]')) ||
+            (Array.isArray(data) && data.length === 0);
+          if (isEmpty) {
+            const userText = getLastUserMessageText(thread.messages);
+            const extractedJson = extractJsonFromText(userText);
+            if (extractedJson) {
+              mapped = {
+                type: mapped.type,
+                payload: { ...mapped.payload, data: extractedJson },
+              };
+              console.log('[Tambo → Workspace] Enriched ChartViewer payload (data from last user message):', {
+                dataLength: extractedJson.length,
+                payload: mapped.payload,
+              });
+            }
+          }
+        }
+
+        // When TableViewer is opened with empty/default data, use JSON from the last user message (e.g. pasted table data)
+        if (mapped.type === ToolType.TableViewer) {
+          const data = mapped.payload.data;
+          const isEmpty =
+            data === undefined ||
+            data === null ||
+            (typeof data === 'string' && (data.trim() === '' || data.trim() === '[]')) ||
+            (Array.isArray(data) && data.length === 0);
+          if (isEmpty) {
+            const userText = getLastUserMessageText(thread.messages);
+            const extractedJson = extractJsonFromText(userText);
+            if (extractedJson) {
+              mapped = {
+                type: mapped.type,
+                payload: { ...mapped.payload, data: extractedJson },
+              };
+              console.log('[Tambo → Workspace] Enriched TableViewer payload (data from last user message):', {
+                dataLength: extractedJson.length,
+                payload: mapped.payload,
+              });
+            }
+          }
+        }
+
+        // When LogViewer is opened with empty logs, use the last user message as log text (e.g. pasted terminal output)
+        if (mapped.type === ToolType.LogViewer) {
+          const logs = mapped.payload.logs;
+          const isEmpty =
+            logs === undefined ||
+            logs === null ||
+            (typeof logs === 'string' && !logs.trim()) ||
+            (Array.isArray(logs) && logs.length === 0);
+          if (isEmpty) {
+            const userText = getLastUserMessageText(thread.messages);
+            if (userText) {
+              mapped = {
+                type: mapped.type,
+                payload: { ...mapped.payload, logs: userText },
+              };
+              console.log('[Tambo → Workspace] Enriched LogViewer payload (logs from last user message):', {
+                payload: mapped.payload,
+              });
+            }
+          }
+        }
+
+        // When MarkdownViewer is opened with empty content, use the last user message (e.g. pasted markdown)
+        if (mapped.type === ToolType.MarkdownViewer) {
+          const md = mapped.payload.content ?? mapped.payload.markdownContent;
+          const isEmpty = md === undefined || md === null || (typeof md === 'string' && !md.trim());
+          if (isEmpty) {
+            const userText = getLastUserMessageText(thread.messages);
+            if (userText) {
+              mapped = {
+                type: mapped.type,
+                payload: { ...mapped.payload, content: userText, markdownContent: userText },
+              };
+              console.log('[Tambo → Workspace] Enriched MarkdownViewer payload (content from last user message):', {
+                payload: mapped.payload,
+              });
+            }
+          }
+        }
+
+        // When EnvManager is opened with empty env, use the last user message (e.g. pasted .env)
+        if (mapped.type === ToolType.EnvManager) {
+          const env = mapped.payload.envContent ?? mapped.payload.env;
+          const isEmpty = env === undefined || env === null || (typeof env === 'string' && !env.trim());
+          if (isEmpty) {
+            const userText = getLastUserMessageTextLikeEnv(thread.messages);
+            if (userText) {
+              mapped = {
+                type: mapped.type,
+                payload: { ...mapped.payload, envContent: userText },
+              };
+              console.log('[Tambo → Workspace] Enriched EnvManager payload (envContent from last user message that looks like .env):', {
+                payload: mapped.payload,
+              });
+            }
+          }
+        }
+
+        // When Terminal is opened, run command from props or extract from last user message (e.g. "run npm run dev")
+        if (mapped.type === ToolType.TerminalSimulator) {
+          const cmd = (mapped.payload.command as string)?.trim();
+          if (!cmd) {
+            const userText = getLastUserMessageText(thread.messages);
+            const extracted = extractCommandFromUserMessage(userText);
+            if (extracted) {
+              mapped = {
+                type: mapped.type,
+                payload: { ...mapped.payload, command: extracted },
+              };
+              console.log('[Tambo → Workspace] Enriched Terminal payload (command from last user message):', {
+                command: extracted,
+                payload: mapped.payload,
+              });
+            }
+          }
+        }
+
+        openedMessageIds.current.add(msg.id);
+        createTool(mapped.type, mapped.payload);
+        console.log('[Tambo → Workspace] createTool called → tool will render with payload:', mapped.payload);
+      }
+    });
+  }, [thread.messages, createTool]);
 
   return (
     <motion.div 
@@ -339,63 +553,15 @@ const WorkspaceUI: React.FC = () => {
         ))}
       </div>
 
-      {/* CHAT INTERFACE - LEFT HALF */}
+      {/* CHAT INTERFACE - LEFT HALF (Tambo AI generative UI) */}
       <div className="flex-1 flex flex-col border-r border-zinc-800 bg-[#0c0c0c] relative z-10 min-w-[300px]">
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/10 backdrop-blur-md">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">AI ASSISTANT</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">TAMBO AI</span>
           </div>
-          {isLoading && (
-            <motion.div 
-              animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-              className="w-4 h-4 border-2 border-blue-500/30 border-t-blue-500 rounded-full"
-            />
-          )}
         </div>
-        
-        <div className="flex-1 overflow-auto p-6 space-y-6">
-          <AnimatePresence mode="popLayout">
-            {chatHistory.map((msg) => (
-              <motion.div 
-                key={msg.id} 
-                initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                layout
-                className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-              >
-                <div className={`max-w-[90%] p-4 rounded-2xl text-[13px] leading-relaxed shadow-xl ${
-                  msg.role === 'user' 
-                    ? 'bg-blue-600 text-white rounded-tr-none' 
-                    : msg.role === 'system'
-                    ? 'bg-zinc-800/20 text-zinc-500 italic text-[11px] border-none'
-                    : 'bg-zinc-900 text-zinc-300 border border-zinc-800/50 rounded-tl-none'
-                }`}>
-                  {msg.content}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <div ref={chatEndRef} />
-        </div>
-
-        <div className="p-6 border-t border-zinc-800 bg-[#0a0a0a]">
-          <form onSubmit={handleChatSubmit} className="relative">
-            <input 
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Ask the AI to build something..."
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl pl-5 pr-12 py-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all shadow-inner"
-            />
-            <button 
-              type="submit"
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
-            </button>
-          </form>
-        </div>
+        <TamboChat />
       </div>
 
       {/* DYNAMIC WORKSPACE (TAMBO TABS) - RIGHT HALF */}
@@ -454,7 +620,7 @@ const WorkspaceUI: React.FC = () => {
                 className="flex-1 p-6 overflow-hidden flex flex-col"
               >
                 <div className="flex-1 overflow-hidden shadow-2xl rounded-3xl border border-zinc-800 bg-[#111] flex flex-col">
-                  <ToolRenderer tool={activeTool} />
+                  <ToolRenderer tool={activeTool} createTool={createTool} />
                 </div>
               </motion.div>
             ) : (

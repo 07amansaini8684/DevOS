@@ -46,6 +46,13 @@ export const TOOL_REGISTRY: Record<ToolType, ToolMetadata> = {
     color: '#ec4899',
     icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
   },
+  [ToolType.ChartViewer]: {
+    type: ToolType.ChartViewer,
+    label: 'Chart Viewer',
+    description: 'Auto-visualize structured data (JSON/arrays).',
+    color: '#ec4899',
+    icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+  },
   [ToolType.CodeGenerator]: {
     type: ToolType.CodeGenerator,
     label: 'Code Generator',
@@ -72,7 +79,7 @@ export const TOOL_REGISTRY: Record<ToolType, ToolMetadata> = {
     label: 'Env Manager',
     description: 'Securely manage environment variables.',
     color: '#fbbf24',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3y-3.5"/></svg>
+    icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 0"/></svg>
   },
   [ToolType.TerminalSimulator]: {
     type: ToolType.TerminalSimulator,

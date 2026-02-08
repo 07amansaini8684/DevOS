@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface ApiTesterProps {
   payload: {
@@ -15,23 +14,55 @@ const ApiTester: React.FC<ApiTesterProps> = ({ payload }) => {
   const [url, setUrl] = useState(payload.url || '');
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const hasAutoSent = useRef(false);
 
-  const handleSend = async () => {
+  const doFetch = async (m: string, u: string, h?: Record<string, string>, b?: string) => {
+    if (!u.trim()) return;
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(r => setTimeout(r, 1000));
+      const opts: RequestInit = {
+        method: m,
+        headers: h ?? {},
+      };
+      if (b && (m === 'POST' || m === 'PUT' || m === 'PATCH')) {
+        opts.body = b;
+        if (!opts.headers['Content-Type']) (opts.headers as Record<string, string>)['Content-Type'] = 'application/json';
+      }
+      const res = await fetch(u, opts);
+      const data = await res.json().catch(() => res.text());
       setResponse({
-        status: 200,
-        statusText: "OK",
-        data: { message: "Successfully fetched data from simulated endpoint", timestamp: new Date().toISOString() }
+        status: res.status,
+        statusText: res.statusText,
+        headers: Object.fromEntries(res.headers.entries()),
+        data,
       });
-    } catch (err) {
-      setResponse({ error: "Failed to fetch" });
+    } catch (err: any) {
+      setResponse({ error: err?.message ?? 'Failed to fetch' });
     } finally {
       setLoading(false);
     }
   };
+
+  const body = payload.body ?? '';
+  const handleSend = () => doFetch(method, url, payload.headers, body);
+
+  useEffect(() => {
+    console.log('[ApiTester] Mounted with payload:', payload);
+  }, [payload?.url, payload?.method]);
+
+  // Pre-fill from payload (already in initial state) and auto-send once when URL is provided
+  useEffect(() => {
+    if (payload.url && !hasAutoSent.current) {
+      hasAutoSent.current = true;
+      console.log('[ApiTester] Auto-sending request:', { method: payload.method || 'GET', url: payload.url });
+      doFetch(
+        payload.method || 'GET',
+        payload.url!,
+        payload.headers,
+        payload.body
+      );
+    }
+  }, []);
 
   return (
     <div className="flex flex-col h-full bg-[#111] rounded-lg border border-zinc-800 overflow-hidden">
