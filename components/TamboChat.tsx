@@ -120,7 +120,7 @@ export default function TamboChat() {
             animate={{ opacity: 1, scale: 1 }}
             className="absolute inset-0 flex flex-col items-center justify-center p-6"
           >
-            <div className="mb-6" style={{ filter: 'invert(1) brightness(1.1)' , backgroundColor: '#eeeeee' , borderRadius: '10px'}}>
+            <div className="mb-6" style={{ filter: 'invert(1) brightness(1.1)'}}>
               <img
                 src={octoSight}
                 alt=""
@@ -141,11 +141,12 @@ export default function TamboChat() {
             exit={{ opacity: 0 }}
             className="absolute inset-0 flex flex-col items-center justify-center p-6"
           >
-            <div className="mb-4" style={{ filter: 'invert(1) brightness(1.1)', backgroundColor: '#eeeeee' }}>
+            <div className="mb-4" style={{ filter: 'invert(1) brightness(1.1)', backgroundColor: '#eeeeee', borderRadius: '10px' }}>
               <img
                 src={octoSight}
                 alt=""
                 className="w-28 h-28 object-contain opacity-80 animate-pulse filter invert-100 brightness(1.1)"
+                style={{ backgroundColor: '#eeeeee', borderRadius: '10px' , filter: 'invert(1) brightness(1.1)' }}
               />
             </div>
             <div className="flex items-center gap-2 text-[11px] text-zinc-500">
@@ -205,7 +206,7 @@ export default function TamboChat() {
         </AnimatePresence>
         {stageLabel && !isIdle && thread.messages.length > 0 && (
           <div className="flex items-center gap-3 text-[11px] text-zinc-500">
-            <img src={octoSight} alt="" className="w-8 h-8 object-contain opacity-70 animate-pulse" />
+            <img src={octoSight} alt="" className="w-8 h-8 object-contain opacity-70 animate-pulse filter invert-100 brightness(1.1)" style={{ backgroundColor: '#eeeeee', borderRadius: '10px' }} />
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
