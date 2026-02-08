@@ -1,15 +1,16 @@
 <div align="center">
-  <video width="1200" height="475" controls>
-    <source src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" type="video/mp4">
-  </video>
+  <a href="https://jam.dev/c/55d1526a-fbe0-4737-81cc-005f51003f67">
+    <img src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" width="1200" alt="Demo Video"/>
+  </a>
 </div>
+
 
 
 # Run and deploy your AI Studio app
 
 This contains everything you need to run your app locally.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1Ht7mJPEoUdqkjEs_spVa5a6VODmL-4fA
+View app : https://dev-os-pied.vercel.app/
 
 ## Run Locally
 
