@@ -8,7 +8,6 @@ import {
 import { tamboComponentToLabel } from '../services/tamboToWorkspace';
 import octoSight from '../assets/Octo-Sight.avif';
 
-/** Get plain text from message content (for copy / edit). */
 function getMessageText(content: unknown): string {
   if (!Array.isArray(content)) return String(content ?? '');
   return (content as Array<{ type?: string; text?: string }>)
@@ -17,9 +16,6 @@ function getMessageText(content: unknown): string {
     .trim();
 }
 
-/**
- * Renders a single message's text content (content is an array of parts).
- */
 function MessageContent({ content }: { content: Array<{ type?: string; text?: string }> }) {
   if (!Array.isArray(content)) return <p className="text-zinc-400">{String(content)}</p>;
   return (
@@ -97,6 +93,7 @@ export default function TamboChat() {
     e.preventDefault();
     if (!value.trim() || isPending) return;
     submit();
+    setValue('');
   };
 
   const stageLabel =
@@ -123,11 +120,13 @@ export default function TamboChat() {
             animate={{ opacity: 1, scale: 1 }}
             className="absolute inset-0 flex flex-col items-center justify-center p-6"
           >
-            <img
-              src={octoSight}
-              alt=""
-              className="w-32 h-32 object-contain opacity-90 mb-6 filter invert"
-            />
+            <div className="mb-6" style={{ filter: 'invert(1) brightness(1.1)' , backgroundColor: '#eeeeee' , borderRadius: '10px'}}>
+              <img
+                src={octoSight}
+                alt=""
+                className="w-32 h-32 object-contain opacity-90"
+              />
+            </div>
             <p className="text-sm text-zinc-500 text-center max-w-xs font-medium">
               Ask me to test an API, build a chart, open a tool, or generate code.
             </p>
@@ -142,15 +141,18 @@ export default function TamboChat() {
             exit={{ opacity: 0 }}
             className="absolute inset-0 flex flex-col items-center justify-center p-6"
           >
-            <img
-              src={octoSight}
-              alt=""
-              className="w-28 h-28 object-contain opacity-80 mb-4 animate-pulse"
-            />
+            <div className="mb-4" style={{ filter: 'invert(1) brightness(1.1)', backgroundColor: '#eeeeee' }}>
+              <img
+                src={octoSight}
+                alt=""
+                className="w-28 h-28 object-contain opacity-80 animate-pulse filter invert-100 brightness(1.1)"
+              />
+            </div>
             <div className="flex items-center gap-2 text-[11px] text-zinc-500">
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+                style={{ filter: 'invert(1)' }}
                 className="w-3 h-3 border-2 border-blue-500/30 border-t-blue-500 rounded-full"
               />
               {stageLabel || (isPending ? 'Sending...' : 'Thinking...')}

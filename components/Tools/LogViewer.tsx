@@ -36,6 +36,10 @@ function parseLogs(raw: string[]): LogBlock[] {
   let id = 0;
   while (i < raw.length) {
     const line = raw[i];
+    if (line == null) {
+      i++;
+      continue;
+    }
     const level = detectLevel(line);
     const looksLikeError = /Error:|TypeError|ReferenceError|SyntaxError|at\s+\S+\s+\(/.test(line);
     const nextIsStack = i + 1 < raw.length && isStackLine(raw[i + 1]);
@@ -76,9 +80,13 @@ function normalizeInput(logs: unknown): string[] {
       const fallback = splitLogicalLogLines(byNewline[0]);
       if (fallback.length > 1) return fallback;
     }
-    return byNewline;
+    return byNewline.filter((s) => s != null);
   }
-  if (Array.isArray(logs)) return logs.flatMap((l) => (typeof l === 'string' ? l.split(/\r?\n/) : [String(l)]));
+  if (Array.isArray(logs)) {
+    return logs
+      .flatMap((l) => (l != null && typeof l === 'string' ? l.split(/\r?\n/) : [String(l ?? '')]))
+      .filter((s) => s != null);
+  }
   return [String(logs)];
 }
 
@@ -168,9 +176,10 @@ const LogViewer: React.FC<LogViewerProps> = ({ payload }) => {
     success: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/5',
   };
 
-  const highlightMatch = (text: string) => {
-    if (!searchLower) return text;
-    const parts = text.split(new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+  const highlightMatch = (text: string | undefined) => {
+    const s = (text ?? '').toString();
+    if (!searchLower) return s;
+    const parts = s.split(new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
     return parts.map((part, i) =>
       part.toLowerCase() === searchLower ? <mark key={i} className="bg-yellow-500/50 text-inherit">{part}</mark> : part
     );
@@ -264,7 +273,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ payload }) => {
                     <span className="w-8 shrink-0 text-zinc-600 text-[10px] select-none">{++lineNum}</span>
                     <button type="button" onClick={() => toggleExpand(block.id)} className="flex-1 min-w-0 text-left hover:underline flex items-center gap-1 break-all">
                       <span className="shrink-0 text-zinc-500">▶</span>
-                      {highlightMatch(block.lines[0])}
+                      {highlightMatch(block.lines[0] ?? '')}
                       <span className="text-zinc-500">… +{block.lines.length - 1} lines</span>
                     </button>
                     <button type="button" onClick={() => copyLine(block.raw)} className="shrink-0 p-1 rounded opacity-60 hover:opacity-100" title="Copy block">
@@ -273,17 +282,17 @@ const LogViewer: React.FC<LogViewerProps> = ({ payload }) => {
                   </div>
                 ) : (
                   <>
-                    {block.lines.map((line, lineIdx) => (
+                    {(block.lines ?? []).map((line, lineIdx) => (
                       <div key={`${block.id}-${lineIdx}`} className="flex items-center gap-2 min-h-[20px]">
                         <span className="w-8 shrink-0 text-zinc-600 text-[10px] select-none">{++lineNum}</span>
                         <span
                           className="flex-1 min-w-0 break-all cursor-pointer hover:opacity-80"
-                          onClick={() => copyLine(line)}
+                          onClick={() => copyLine(line ?? '')}
                           title="Click to copy"
                         >
-                          {highlightMatch(line)}
+                          {highlightMatch(line ?? '')}
                         </span>
-                        <button type="button" onClick={() => copyLine(line)} className="shrink-0 p-1 rounded opacity-0 hover:opacity-100 text-zinc-500" title="Copy line">
+                        <button type="button" onClick={() => copyLine(line ?? '')} className="shrink-0 p-1 rounded opacity-0 hover:opacity-100 text-zinc-500" title="Copy line">
                           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
                         </button>
                       </div>

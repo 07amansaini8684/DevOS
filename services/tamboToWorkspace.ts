@@ -131,6 +131,18 @@ export function getLastUserMessageTextLikeEnv(messages: Array<{ role: string; co
   return getLastUserMessageText(messages);
 }
 
+/** Find the most recent user message that looks like log output (timestamps, [INFO], [ERROR], etc.). Use for LogViewer so full paste is used even if last message is short. */
+export function getLastUserMessageTextLikeLogs(messages: Array<{ role: string; content: unknown }>): string {
+  const logLike = /\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i; // ISO timestamp
+  const levelLike = /\]\s*(INFO|ERROR|WARN|DEBUG|AUTH|CRON|WORKER)\s/i;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role !== 'user') continue;
+    const text = contentToText(messages[i].content);
+    if (text && (logLike.test(text) || levelLike.test(text))) return text;
+  }
+  return getLastUserMessageText(messages);
+}
+
 /** Extract shell command from user message (e.g. "run npm run dev" -> "npm run dev", "check node version" -> "node -v"). */
 export function extractCommandFromUserMessage(text: string): string {
   const t = text.trim();
